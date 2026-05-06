@@ -192,51 +192,12 @@ function createPartNode(player, winner, onClick) {
     return div;
 }
 
-async function shareToWhatsApp() {
-    const element = document.getElementById('exportArea'); 
-    const btnShare = document.querySelector('.btn-share');
-    
-    const originalText = btnShare.innerText;
-    btnShare.innerText = "BAIXANDO IMAGEM...";
-    
+function printTournament() {
+    // 1. Atualiza a data e hora na tela
     const now = new Date();
     const dateTimeString = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
     document.getElementById('exportDateTime').innerText = "Gerado em: " + dateTimeString;
     
-    // Identifica quais são as cores de fundo e da bolinha do tema atual
-    const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
-    const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
-    
-    // TRUQUE: O html2canvas não lê radial-gradient com CSS variables. 
-    // Criamos um padrão SVG na hora com a cor certa para burlar isso!
-    const safeDotColor = currentDotColor.replace('#', '%23'); // Converte o HEX para URL
-    const svgPattern = `url("data:image/svg+xml,%3Csvg width='25' height='25' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='12.5' cy='12.5' r='1.5' fill='${safeDotColor}'/%3E%3C/svg%3E")`;
-    
-    // Salva o fundo original e aplica o nosso SVG falso
-    const originalBgImage = element.style.backgroundImage;
-    element.style.backgroundImage = svgPattern;
-    
-    try {
-        const canvas = await html2canvas(element, { 
-            backgroundColor: currentBgColor, 
-            scale: 2,
-            useCORS: true 
-        });
-        
-        const imageURL = canvas.toDataURL("image/png");
-        const a = document.createElement('a');
-        a.href = imageURL;
-        a.download = "chaveamento-invencivel.png";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-    } catch (e) { 
-        console.error("Erro do html2canvas:", e);
-        alert("❌ Erro ao baixar a imagem!\nLembre-se de rodar com o Live Server.");
-    } finally {
-        // Restaura tudo ao normal depois que a foto foi tirada (dando certo ou erro)
-        btnShare.innerText = originalText;
-        element.style.backgroundImage = originalBgImage;
-    }
+    // 2. Chama a tela de impressão nativa do celular/PC!
+    window.print();
 }
