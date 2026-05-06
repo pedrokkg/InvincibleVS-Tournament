@@ -210,62 +210,65 @@ async function downloadImageMobileSafe() {
     const dateTimeString = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
     document.getElementById('exportDateTime').innerText = "Gerado em: " + dateTimeString;
     
-    // Truque das bolinhas de fundo (AGORA CODIFICADO PARA O IPHONE NÃO RECLAMAR)
+    // As cores atuais do tema
     const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
     
-    // Cria o código SVG e traduz para um formato seguro de URL que o Safari aceita
+    // 💡 TRUQUE MESTRE PARA O IPHONE: Usar Base64 em vez de texto!
     const svgString = `<svg width='25' height='25' xmlns='http://www.w3.org/2000/svg'><circle cx='12.5' cy='12.5' r='1.5' fill='${currentDotColor}'/></svg>`;
-    const safeSvg = encodeURIComponent(svgString);
-    const svgPattern = `url("data:image/svg+xml;charset=utf-8,${safeSvg}")`;
+    const base64Svg = btoa(svgString); // Codifica perfeitamente para o Safari
+    const svgPattern = `url("data:image/svg+xml;base64,${base64Svg}")`;
     
     const originalBgImage = element.style.backgroundImage;
     element.style.backgroundImage = svgPattern;
     
     try {
+        // Gera o canvas
         const canvas = await html2canvas(element, { 
             backgroundColor: currentBgColor, 
-            scale: 2,
-            useCORS: true 
+            scale: 2, 
+            useCORS: true,
+            logging: false // Desliga logs que podem travar o celular
         });
         
-        // Retorna o fundo ao normal imediatamente após a foto
+        // Retorna o fundo ao normal imediatamente
         element.style.backgroundImage = originalBgImage;
 
-        canvas.toBlob(async function(blob) {
-            // Se o canvas falhar em gerar o blob, avisa
-            if (!blob) throw new Error("Falha ao gerar o arquivo de imagem.");
+        // Cria o arquivo binário (Blob) de forma otimizada
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        
+        if (!blob) throw new Error("O iPhone bloqueou a criação do arquivo.");
 
-            const file = new File([blob], fileName, { type: "image/png" });
-            
-            // Verifica se o dispositivo (iPhone/Android) suporta compartilhar arquivos
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        title: inputName ? inputName : 'Torneio Invincible VS',
-                        files: [file]
-                    });
-                } catch (shareError) {
-                    console.log("Usuário cancelou o compartilhamento.");
-                }
-            } else {
-                // FALLBACK: PC
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+        const file = new File([blob], fileName, { type: "image/png" });
+        
+        // Tenta abrir o compartilhamento nativo
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    title: inputName ? inputName : 'Torneio Invincible VS',
+                    files: [file]
+                });
+            } catch (shareError) {
+                console.log("Usuário cancelou ou fechou a aba de compartilhamento.");
             }
-            
-            btnShare.innerText = originalText;
-        }, 'image/png');
+        } else {
+            // Fallback para PC
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        btnShare.innerText = originalText;
         
     } catch (e) { 
-        console.error("Erro do html2canvas:", e);
-        alert("❌ Erro ao processar a imagem. Tente novamente.");
+        console.error("Erro completo:", e);
+        // Agora o alerta mostra O MOTIVO do erro pra não ficarmos no escuro
+        alert("❌ Erro: " + e.message + "\n\nTente recarregar a página.");
         element.style.backgroundImage = originalBgImage;
         btnShare.innerText = originalText;
     }
