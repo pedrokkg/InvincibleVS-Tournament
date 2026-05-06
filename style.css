@@ -213,3 +213,40 @@ button:hover {
     .bracket-container { justify-content: flex-start; } .player-list { grid-template-columns: 1fr; }
     .export-header h2 { font-size: 1.2rem; }
 }
+
+/* =========================================
+   CONFIGURAÇÕES EXCLUSIVAS PARA IMPRESSÃO/PDF
+   ========================================= */
+@media print {
+    /* 1. Força os navegadores a imprimirem as cores e imagens de fundo perfeitamente */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 2. Esconde o cabeçalho original, a tela de configuração e os botões */
+    header, #setup-section, .actions {
+        display: none !important;
+    }
+
+    /* 3. Limpa as margens do site para focar 100% na tabela do torneio */
+    body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+
+    /* 4. Ajusta a área do torneio para ocupar a folha inteira sem bordas extras */
+    .export-area {
+        margin: 0 !important;
+        border: none !important;
+        width: 100% !important;
+        page-break-inside: avoid; /* Tenta evitar que corte a tabela no meio da página */
+    }
+
+    /* 5. Garante que a barra de rolagem suma e a chave apareça inteira na folha */
+    .bracket-wrapper {
+        overflow: visible !important;
+        justify-content: flex-start !important;
+    }
+}
