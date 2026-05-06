@@ -198,9 +198,8 @@ async function downloadImageMobileSafe() {
     const element = document.getElementById('exportArea'); 
     const btnShare = document.querySelector('.btn-share');
     
-    // Pega o nome do torneio que o usuário digitou
+    // Pega o nome do torneio
     const inputName = document.getElementById('tournamentName').value.trim();
-    // Monta o nome do arquivo. Se não tiver nome, usa "Torneio" como padrão
     const fileName = inputName ? `${inputName} chaveamento.png` : "Torneio chaveamento.png";
     
     const originalText = btnShare.innerText;
@@ -211,11 +210,14 @@ async function downloadImageMobileSafe() {
     const dateTimeString = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
     document.getElementById('exportDateTime').innerText = "Gerado em: " + dateTimeString;
     
-    // Truque das bolinhas de fundo 
+    // Truque das bolinhas de fundo (AGORA CODIFICADO PARA O IPHONE NÃO RECLAMAR)
     const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
-    const safeDotColor = currentDotColor.replace('#', '%23');
-    const svgPattern = `url("data:image/svg+xml,%3Csvg width='25' height='25' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='12.5' cy='12.5' r='1.5' fill='${safeDotColor}'/%3E%3C/svg%3E")`;
+    
+    // Cria o código SVG e traduz para um formato seguro de URL que o Safari aceita
+    const svgString = `<svg width='25' height='25' xmlns='http://www.w3.org/2000/svg'><circle cx='12.5' cy='12.5' r='1.5' fill='${currentDotColor}'/></svg>`;
+    const safeSvg = encodeURIComponent(svgString);
+    const svgPattern = `url("data:image/svg+xml;charset=utf-8,${safeSvg}")`;
     
     const originalBgImage = element.style.backgroundImage;
     element.style.backgroundImage = svgPattern;
@@ -231,21 +233,23 @@ async function downloadImageMobileSafe() {
         element.style.backgroundImage = originalBgImage;
 
         canvas.toBlob(async function(blob) {
-            // O arquivo agora usa a variável 'fileName' dinâmica!
+            // Se o canvas falhar em gerar o blob, avisa
+            if (!blob) throw new Error("Falha ao gerar o arquivo de imagem.");
+
             const file = new File([blob], fileName, { type: "image/png" });
             
             // Verifica se o dispositivo (iPhone/Android) suporta compartilhar arquivos
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
-                        title: inputName ? inputName : 'Torneio Invincible VS', // Título dinâmico no compartilhamento nativo
+                        title: inputName ? inputName : 'Torneio Invincible VS',
                         files: [file]
                     });
                 } catch (shareError) {
                     console.log("Usuário cancelou o compartilhamento.");
                 }
             } else {
-                // FALLBACK: Para o PC, também aplicamos o nome dinâmico no download
+                // FALLBACK: PC
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -261,7 +265,7 @@ async function downloadImageMobileSafe() {
         
     } catch (e) { 
         console.error("Erro do html2canvas:", e);
-        alert("❌ Erro ao processar a imagem.");
+        alert("❌ Erro ao processar a imagem. Tente novamente.");
         element.style.backgroundImage = originalBgImage;
         btnShare.innerText = originalText;
     }
