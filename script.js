@@ -214,60 +214,64 @@ async function downloadImageMobileSafe() {
     const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
     
-    // 💡 TRUQUE MESTRE PARA O IPHONE: Usar Base64 em vez de texto!
-    const svgString = `<svg width='25' height='25' xmlns='http://www.w3.org/2000/svg'><circle cx='12.5' cy='12.5' r='1.5' fill='${currentDotColor}'/></svg>`;
-    const base64Svg = btoa(svgString); // Codifica perfeitamente para o Safari
-    const svgPattern = `url("data:image/svg+xml;base64,${base64Svg}")`;
+    // 💡 A MÁGICA PARA O IPHONE: Cria um mini-canvas na memória, desenha a bolinha
+    // e converte num formato PNG inofensivo. O Safari nunca vai bloquear isso!
+    const dotCanvas = document.createElement('canvas');
+    dotCanvas.width = 25;
+    dotCanvas.height = 25;
+    const ctx = dotCanvas.getContext('2d');
+    ctx.fillStyle = currentDotColor;
+    ctx.beginPath();
+    ctx.arc(12.5, 12.5, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    const pngPatternUrl = dotCanvas.toDataURL('image/png'); // Transforma em imagem PNG segura
     
     const originalBgImage = element.style.backgroundImage;
-    element.style.backgroundImage = svgPattern;
+    element.style.backgroundImage = `url("${pngPatternUrl}")`;
     
     try {
-        // Gera o canvas
         const canvas = await html2canvas(element, { 
             backgroundColor: currentBgColor, 
             scale: 2, 
             useCORS: true,
-            logging: false // Desliga logs que podem travar o celular
+            logging: false
         });
         
         // Retorna o fundo ao normal imediatamente
         element.style.backgroundImage = originalBgImage;
 
-        // Cria o arquivo binário (Blob) de forma otimizada
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        
-        if (!blob) throw new Error("O iPhone bloqueou a criação do arquivo.");
+        canvas.toBlob(async function(blob) {
+            if (!blob) throw new Error("O iPhone bloqueou a criação do arquivo.");
 
-        const file = new File([blob], fileName, { type: "image/png" });
-        
-        // Tenta abrir o compartilhamento nativo
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-                await navigator.share({
-                    title: inputName ? inputName : 'Torneio Invincible VS',
-                    files: [file]
-                });
-            } catch (shareError) {
-                console.log("Usuário cancelou ou fechou a aba de compartilhamento.");
+            const file = new File([blob], fileName, { type: "image/png" });
+            
+            // Verifica se o dispositivo suporta compartilhar arquivos (iPhone/Android novos)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: inputName ? inputName : 'Torneio Invincible VS',
+                        files: [file]
+                    });
+                } catch (shareError) {
+                    console.log("Usuário cancelou ou fechou a aba de compartilhamento.");
+                }
+            } else {
+                // Fallback para PC
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
-        } else {
-            // Fallback para PC
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        btnShare.innerText = originalText;
+            
+            btnShare.innerText = originalText;
+        }, 'image/png');
         
     } catch (e) { 
         console.error("Erro completo:", e);
-        // Agora o alerta mostra O MOTIVO do erro pra não ficarmos no escuro
         alert("❌ Erro: " + e.message + "\n\nTente recarregar a página.");
         element.style.backgroundImage = originalBgImage;
         btnShare.innerText = originalText;
