@@ -196,67 +196,81 @@ function createPartNode(player, winner, onClick) {
 
 async function downloadImageMobileSafe() {
     const element = document.getElementById('exportArea'); 
+    const wrapper = document.querySelector('.bracket-wrapper');
     const btnShare = document.querySelector('.btn-share');
     
-    // Pega o nome do torneio
     const inputName = document.getElementById('tournamentName').value.trim();
     const fileName = inputName ? `${inputName} chaveamento.png` : "Torneio chaveamento.png";
     
     const originalText = btnShare.innerText;
     btnShare.innerText = "GERANDO IMAGEM...";
     
-    // Configura a data e hora
     const now = new Date();
     const dateTimeString = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
     document.getElementById('exportDateTime').innerText = "Gerado em: " + dateTimeString;
     
-    // As cores atuais do tema
     const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
     
-    // 💡 A MÁGICA PARA O IPHONE: Cria um mini-canvas na memória, desenha a bolinha
-    // e converte num formato PNG inofensivo. O Safari nunca vai bloquear isso!
+    // Mini-canvas para o fundo (iOS Safe)
     const dotCanvas = document.createElement('canvas');
-    dotCanvas.width = 25;
-    dotCanvas.height = 25;
+    dotCanvas.width = 25; dotCanvas.height = 25;
     const ctx = dotCanvas.getContext('2d');
     ctx.fillStyle = currentDotColor;
-    ctx.beginPath();
-    ctx.arc(12.5, 12.5, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-    const pngPatternUrl = dotCanvas.toDataURL('image/png'); // Transforma em imagem PNG segura
+    ctx.beginPath(); ctx.arc(12.5, 12.5, 1.5, 0, Math.PI * 2); ctx.fill();
+    const pngPatternUrl = dotCanvas.toDataURL('image/png');
     
+    // === LÓGICA DE "IMPRESSORA" (CAPTURA TUDO) ===
+    
+    // 1. Salva como estava antes
     const originalBgImage = element.style.backgroundImage;
+    const originalWidth = element.style.width;
+    const originalOverflow = wrapper.style.overflow;
+
+    // 2. Prepara o elemento para a "foto"
+    // Descobrimos qual é a largura real do conteúdo (mesmo o que está fora da tela)
+    const fullWidth = wrapper.scrollWidth; 
+    const fullHeight = element.scrollHeight;
+
     element.style.backgroundImage = `url("${pngPatternUrl}")`;
+    element.style.width = fullWidth + "px"; // Estica o fundo azul até o fim do torneio
+    wrapper.style.overflow = "visible"; // Remove a trava de rolagem lateral
     
     try {
         const canvas = await html2canvas(element, { 
             backgroundColor: currentBgColor, 
             scale: 2, 
             useCORS: true,
-            logging: false
+            logging: false,
+            // Forçamos o canvas a ter o tamanho real do conteúdo, não da tela
+            width: fullWidth,
+            height: fullHeight,
+            windowWidth: fullWidth,
+            windowHeight: fullHeight,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0
         });
         
-        // Retorna o fundo ao normal imediatamente
+        // Volta o site ao normal para o usuário continuar mexendo
         element.style.backgroundImage = originalBgImage;
+        element.style.width = originalWidth;
+        wrapper.style.overflow = originalOverflow;
 
         canvas.toBlob(async function(blob) {
-            if (!blob) throw new Error("O iPhone bloqueou a criação do arquivo.");
+            if (!blob) throw new Error("Falha ao gerar imagem.");
 
             const file = new File([blob], fileName, { type: "image/png" });
             
-            // Verifica se o dispositivo suporta compartilhar arquivos (iPhone/Android novos)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
-                        title: inputName ? inputName : 'Torneio Invincible VS',
+                        title: inputName || 'Torneio Invincible VS',
                         files: [file]
                     });
-                } catch (shareError) {
-                    console.log("Usuário cancelou ou fechou a aba de compartilhamento.");
-                }
+                } catch (err) { console.log("Cancelado."); }
             } else {
-                // Fallback para PC
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -266,14 +280,14 @@ async function downloadImageMobileSafe() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }
-            
             btnShare.innerText = originalText;
         }, 'image/png');
         
     } catch (e) { 
-        console.error("Erro completo:", e);
-        alert("❌ Erro: " + e.message + "\n\nTente recarregar a página.");
+        alert("Erro: " + e.message);
         element.style.backgroundImage = originalBgImage;
+        element.style.width = originalWidth;
+        wrapper.style.overflow = originalOverflow;
         btnShare.innerText = originalText;
     }
 }
