@@ -192,27 +192,31 @@ function createPartNode(player, winner, onClick) {
     return div;
 }
 
-async function shareToWhatsApp() {
+// Substitua a função final do seu código por esta:
+
+async function downloadImageMobileSafe() {
     const element = document.getElementById('exportArea'); 
     const btnShare = document.querySelector('.btn-share');
     
-    const originalText = btnShare.innerText;
-    btnShare.innerText = "BAIXANDO IMAGEM...";
+    // Pega o nome do torneio que o usuário digitou
+    const inputName = document.getElementById('tournamentName').value.trim();
+    // Monta o nome do arquivo. Se não tiver nome, usa "Torneio" como padrão
+    const fileName = inputName ? `${inputName} chaveamento.png` : "Torneio chaveamento.png";
     
+    const originalText = btnShare.innerText;
+    btnShare.innerText = "GERANDO IMAGEM...";
+    
+    // Configura a data e hora
     const now = new Date();
     const dateTimeString = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
     document.getElementById('exportDateTime').innerText = "Gerado em: " + dateTimeString;
     
-    // Identifica quais são as cores de fundo e da bolinha do tema atual
+    // Truque das bolinhas de fundo 
     const currentBgColor = getComputedStyle(document.body).getPropertyValue('--bg-body').trim();
     const currentDotColor = getComputedStyle(document.body).getPropertyValue('--bg-dots').trim();
-    
-    // TRUQUE: O html2canvas não lê radial-gradient com CSS variables. 
-    // Criamos um padrão SVG na hora com a cor certa para burlar isso!
-    const safeDotColor = currentDotColor.replace('#', '%23'); // Converte o HEX para URL
+    const safeDotColor = currentDotColor.replace('#', '%23');
     const svgPattern = `url("data:image/svg+xml,%3Csvg width='25' height='25' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='12.5' cy='12.5' r='1.5' fill='${safeDotColor}'/%3E%3C/svg%3E")`;
     
-    // Salva o fundo original e aplica o nosso SVG falso
     const originalBgImage = element.style.backgroundImage;
     element.style.backgroundImage = svgPattern;
     
@@ -223,20 +227,42 @@ async function shareToWhatsApp() {
             useCORS: true 
         });
         
-        const imageURL = canvas.toDataURL("image/png");
-        const a = document.createElement('a');
-        a.href = imageURL;
-        a.download = "chaveamento-invencivel.png";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        // Retorna o fundo ao normal imediatamente após a foto
+        element.style.backgroundImage = originalBgImage;
+
+        canvas.toBlob(async function(blob) {
+            // O arquivo agora usa a variável 'fileName' dinâmica!
+            const file = new File([blob], fileName, { type: "image/png" });
+            
+            // Verifica se o dispositivo (iPhone/Android) suporta compartilhar arquivos
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: inputName ? inputName : 'Torneio Invincible VS', // Título dinâmico no compartilhamento nativo
+                        files: [file]
+                    });
+                } catch (shareError) {
+                    console.log("Usuário cancelou o compartilhamento.");
+                }
+            } else {
+                // FALLBACK: Para o PC, também aplicamos o nome dinâmico no download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            btnShare.innerText = originalText;
+        }, 'image/png');
         
     } catch (e) { 
         console.error("Erro do html2canvas:", e);
-        alert("❌ Erro ao baixar a imagem!\nLembre-se de rodar com o Live Server.");
-    } finally {
-        // Restaura tudo ao normal depois que a foto foi tirada (dando certo ou erro)
-        btnShare.innerText = originalText;
+        alert("❌ Erro ao processar a imagem.");
         element.style.backgroundImage = originalBgImage;
+        btnShare.innerText = originalText;
     }
 }

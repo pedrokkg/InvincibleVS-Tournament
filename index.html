@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invincible VS - Tournament</title>
+    <link rel="icon" type="image/png" href="img/logo2.png">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <!-- Trazendo o html2canvas de volta -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link rel="icon" type="logo2.png" href="img/logo2.png">
 </head>
 <body>
     <div class="container">
-        <!-- Cabeçalho Principal do Site -->
         <header>
             <img src="img/logoVS.png" alt="Invincible VS Logo" class="main-logo">
             <div class="subtitle">TORNEIO MATA-MATA</div>
@@ -26,7 +26,7 @@
 
                 <h2>CADASTRAR DESAFIANTE</h2>
                 <div class="input-group">
-                    <input type="text" id="playerName" placeholder="NOME DO JOGADOR">
+                    <input type="text" id="playerName" placeholder="NOME DO HERÓI/VILÃO">
                     
                     <p class="select-title">ESCOLHA O AVATAR:</p>
                     <div class="image-selector" id="imageSelector"></div>
@@ -41,10 +41,8 @@
         </section>
 
         <section id="bracket-section" class="hidden">
-            <!-- ÁREA DE EXPORTAÇÃO -->
             <div id="exportArea" class="export-area">
                 <div class="export-header">
-                    <!-- Logo na imagem exportada -->
                     <img src="img/logoVS.png" alt="Invincible VS Logo" class="export-logo">
                     <h2 id="displayTournamentName">TORNEIO MATA-MATA</h2>
                 </div>
@@ -59,7 +57,8 @@
             </div>
 
             <div class="actions">
-                <button onclick="shareToWhatsApp()" class="btn-share">BAIXAR IMAGEM DO TORNEIO</button>
+                <!-- Botão atualizado para a nova função -->
+                <button onclick="downloadImageMobileSafe()" class="btn-share">COMPARTILHAR / SALVAR IMAGEM</button>
                 <button onclick="location.reload()" class="btn-restart">NOVO TORNEIO</button>
             </div>
         </section>
